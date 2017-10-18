@@ -19,6 +19,7 @@ import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
@@ -88,13 +89,21 @@ public class CatalogActivity extends AppCompatActivity {
         };
 
 
-        Cursor cursor=db.query(PetEntry.TABLE_NAME,
+        /**Cursor cursor=db.query(PetEntry.TABLE_NAME,
                 projection,
                 null,
                 null,
                 null,
                 null,
                 null);
+         */
+
+        Cursor cursor=getContentResolver().query(
+                PetEntry.CONTENT_URI,   // The content URI
+                projection,             // The columns to return for each row
+                null,                   // Selection criteria
+                null,                   // Selection criteria arguments
+                null);                  // The sort order for returned rows
 
         TextView displayView = (TextView) findViewById(R.id.text_view_pet);
 
@@ -145,15 +154,10 @@ public class CatalogActivity extends AppCompatActivity {
         values.put(PetEntry.COLUMN_PET_GENDER,PetEntry.GENDER_MALE);
         values.put(PetEntry.COLUMN_PET_WEIGHT,7);
 
-        // Gets the data repository in write mode
-        PetDbHelper mDbHelper = new PetDbHelper(this);
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        Uri newRowUri=getContentResolver().insert(PetEntry.CONTENT_URI,values);
 
-        // Insert the new row, returning the primary key value of the new row
-        long newRowId = db.insert(PetEntry.TABLE_NAME, null, values);
-
-        if(newRowId != -1){
-            Toast.makeText(this,"Pet saved id: "+ newRowId,Toast.LENGTH_LONG).show();
+        if(newRowUri != null){
+            Toast.makeText(this,"Pet saved id: "+ newRowUri.toString(),Toast.LENGTH_LONG).show();
 
         }else{
             Log.e(LOG_TAG,"Error with saving pet");
