@@ -70,6 +70,12 @@ public class PetProvider extends ContentProvider {
                 throw new IllegalArgumentException("Cannot query unknown URI " + uri);
         }
 
+        // Set notification URI on the Cursor,
+        // so we know what content URI the Cursor was created for.
+        // if the data at this URI changes, then we know we need to update the Cursor.
+        cursor.setNotificationUri(getContext().getContentResolver(),uri);
+
+
         return cursor;
     }
 
@@ -78,13 +84,21 @@ public class PetProvider extends ContentProvider {
      */
     @Override
     public Uri insert(Uri uri, ContentValues contentValues) {
+        Uri insertedUri = null;
         final int match = sUriMatcher.match(uri);
          switch (match) {
             case PETS:
-                return insertPet(uri, contentValues);
+                insertedUri = insertPet(uri, contentValues);
+                break;
             default:
                 throw new IllegalArgumentException("Insertion is not supported for " + uri);
         }
+
+        //Notify all Listeners that the data has changed for the pet content URI
+        getContext().getContentResolver().notifyChange(uri , null);
+
+
+        return insertedUri;
 
     }
 
@@ -93,20 +107,28 @@ public class PetProvider extends ContentProvider {
      */
     @Override
     public int update(Uri uri, ContentValues contentValues, String selection, String[] selectionArgs) {
+        int updatedPets = 0;
         final int match = sUriMatcher.match(uri);
         switch (match) {
             case PETS:
-                return updatePet(uri, contentValues, selection, selectionArgs);
+                updatedPets = updatePet(uri, contentValues, selection, selectionArgs);
+                break;
             case PET_ID:
                 // For the PET_ID code, extract out the ID from the URI,
                 // so we know which row to update. Selection will be "_id=?" and selection
                 // arguments will be a String array containing the actual ID.
                 selection = PetEntry._ID + "=?";
                 selectionArgs = new String[] { String.valueOf(ContentUris.parseId(uri)) };
-                return updatePet(uri, contentValues, selection, selectionArgs);
+                updatedPets = updatePet(uri, contentValues, selection, selectionArgs);
+                break;
             default:
                 throw new IllegalArgumentException("Update is not supported for " + uri);
         }
+
+        //Notify all Listeners that the data has changed for the pet content URI
+        getContext().getContentResolver().notifyChange(uri , null);
+
+        return updatedPets;
     }
 
     /**
@@ -114,6 +136,9 @@ public class PetProvider extends ContentProvider {
      */
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
+
+        int deletedPets = 0;
+
         // Get Writable database
         SQLiteDatabase database = mDbHelper.getWritableDatabase();
 
@@ -121,15 +146,21 @@ public class PetProvider extends ContentProvider {
         switch (match) {
             case PETS:
                 // Delete all rows that match the selection and selection args
-                return database.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                deletedPets = database.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                break;
             case PET_ID:
                 // Delete a single row given by the ID in the URI
                 selection = PetEntry._ID + "=?";
                 selectionArgs = new String[] { String.valueOf(ContentUris.parseId(uri)) };
-                return database.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                deletedPets = database.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
             default:
                 throw new IllegalArgumentException("Deletion is not supported for " + uri);
         }
+
+        //Notify all Listeners that the data has changed for the pet content URI
+        getContext().getContentResolver().notifyChange(uri , null);
+
+        return deletedPets;
     }
 
     /**
